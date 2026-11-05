@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FocusTube</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23ff8a3d'/%3E%3Cpath d='M13 10.5v11l9-5.5z' fill='%231a0f06'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <button id="homeBtn" class="logo" title="Topics">
+      <span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M9.5 7.5v9l7-4.5z" /></svg></span>
+      <span class="logo-word">Focus<b>Tube</b></span>
+    </button>
+    <div id="topicPill" class="topic-pill hidden"></div>
+    <div class="spacer"></div>
+    <button id="changeTopic" class="btn ghost small hidden">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M7 7h11l-3-3M17 17H6l3 3" /></svg>
+      <span>Change topic</span>
+    </button>
+  </div>
+</header>
+
+<!-- Shown instead of the top bar while a focus session runs -->
+<div id="sessionBar" class="session-bar hidden">
+  <div class="wrap session-inner">
+    <span class="pulse" title="Focus session running"></span>
+    <div class="s-goal"><span class="s-label">Goal</span><b id="sGoal"></b></div>
+    <div class="s-timer" title="Focused time left (only counts while this tab is open)">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2M9 2h6" /></svg>
+      <span id="sTime">25:00</span>
+    </div>
+    <span id="sDrift" class="s-drift hidden"></span>
+    <button id="endSession" class="btn small">End session</button>
+  </div>
+  <div class="s-progress"><span id="sBar"></span></div>
+</div>
+
+<!-- Modal (start session / reflection / summary) -->
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div id="modalCard" class="modal-card"></div>
+</div>
+
+<!-- ===== Topic picker ===== -->
+<main id="pickerView" class="wrap picker">
+  <section class="hero">
+    <h1>What are you learning <span class="accent">today?</span></h1>
+    <p class="lead">Pick one topic and see only videos about it.</p>
+    <ul class="promises">
+      <li><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>No home feed</li>
+      <li><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>No Shorts</li>
+      <li><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>No recommendations</li>
+    </ul>
+  </section>
+
+  <section id="statsBlock" class="hidden">
+    <p class="section-label">Your focus this week</p>
+    <div class="stats-row">
+      <div class="stat"><b id="stWeek">0m</b><span>focused</span></div>
+      <div class="stat"><b id="stSessions">0</b><span>sessions</span></div>
+      <div class="stat"><b id="stStreak">0</b><span>day streak</span></div>
+    </div>
+    <ul id="reflections" class="reflections"></ul>
+  </section>
+
+  <section id="continueBlock" class="hidden">
+    <p class="section-label">Continue learning</p>
+    <div id="continueCard"></div>
+  </section>
+
+  <section>
+    <p class="section-label">Topics</p>
+    <div id="presetCards" class="topic-grid"></div>
+  </section>
+
+  <section id="myTopicsBlock" class="hidden">
+    <p class="section-label">Your topics</p>
+    <div id="myCards" class="topic-grid"></div>
+  </section>
+
+  <section>
+    <p class="section-label">Learn something else</p>
+    <form id="customForm" class="custom">
+      <div class="big-input">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+        <input id="cName" type="text" placeholder="Type any topic, e.g. Blender 3D modelling" required autocomplete="off" />
+        <button class="btn primary" type="submit">Start</button>
+      </div>
+      <details class="advanced">
+        <summary>Filter settings</summary>
+        <div class="row">
+          <label>Videos must mention <span class="hint">comma-separated, use | for "either"</span>
+            <input id="cMust" type="text" placeholder="auto-filled from the topic" />
+          </label>
+          <label>Strictness
+            <select id="cMode">
+              <option value="title">Very strict: in the title</option>
+              <option value="all" selected>Strict: title or description</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint">Keep "must mention" to the 1–2 words that define the topic (like <b>blender</b>). More words means fewer, more precise videos.</p>
+      </details>
+    </form>
+  </section>
+</main>
+
+<!-- ===== Topic view ===== -->
+<main id="topicView" class="wrap hidden">
+  <section id="playerZone" class="player-zone hidden">
+    <div class="player-layout">
+      <div class="player-main">
+        <div class="player-box">
+          <div id="player"></div>
+          <div id="driftCard" class="endcard hidden">
+            <div>
+              <h3>Welcome back</h3>
+              <div id="driftText" class="next-title"></div>
+              <div class="end-actions"><button id="driftResume" class="btn primary">Back to it</button></div>
+            </div>
+          </div>
+          <div id="endcard" class="endcard hidden">
+            <div>
+              <div class="end-check"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg></div>
+              <h3>Nice, that's done</h3>
+              <div id="nextTitle" class="next-title"></div>
+              <div class="end-actions">
+                <button id="playNext" class="btn primary">Play next</button>
+                <button id="replay" class="btn">Replay</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="now">
+          <div class="now-text">
+            <h2 id="nowTitle"></h2>
+            <div id="nowMeta" class="meta"></div>
+          </div>
+          <div class="now-actions">
+            <button id="nowCourse" class="btn small"></button>
+            <button id="closePlayer" class="btn small ghost" title="Close player (Esc)">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="notes">
+        <div class="notes-head">
+          <b>Notes</b>
+          <span class="hint">Press <kbd>N</kbd> to note this moment</span>
+        </div>
+        <form id="noteForm" class="note-form">
+          <button type="button" id="noteTime" class="stamp" title="Click to re-stamp with the current time">0:00</button>
+          <input id="noteInput" type="text" placeholder="What did you learn here?" autocomplete="off" />
+        </form>
+        <ol id="noteList" class="note-list"></ol>
+        <div class="notes-foot">
+          <span id="noteCount" class="hint"></span>
+          <button id="copyNotes" class="btn small">Copy notes</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="topic-head">
+    <div id="topicIcon" class="t-icon"></div>
+    <div class="topic-head-text">
+      <h1 id="topicTitle"></h1>
+      <p id="topicRule" class="hint"></p>
+    </div>
+    <button id="startSession" class="btn primary start-session">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg>
+      Start focus session
+    </button>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button id="tabExplore" class="tab active" role="tab">Explore</button>
+    <button id="tabCourse" class="tab" role="tab">My course <span id="courseCount" class="count"></span></button>
+  </div>
+
+  <div id="courseHead" class="course-head hidden">
+    <div class="course-stats"><b id="courseDone"></b><span id="courseLeft" class="hint"></span></div>
+    <div class="bar"><span id="courseBar"></span></div>
+  </div>
+
+  <div id="toolbar" class="toolbar">
+    <div class="search">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+      <input id="sub" type="text" placeholder="Search inside this topic, e.g. color grading, keyframes" autocomplete="off" />
+    </div>
+    <div class="chips" id="lenChips">
+      <button class="chip active" data-len="any">Any length</button>
+      <button class="chip" data-len="short">3–20 min</button>
+      <button class="chip" data-len="long">20 min+</button>
+      <button class="chip" data-len="course">Full courses</button>
+    </div>
+    <div class="chips">
+      <button class="chip" id="calmChip" title="Calm: hide views and dates, grey thumbnails, 6 picks at a time">Calm</button>
+      <button class="chip" id="strictChip" title="Very strict: the topic words must be in the title">Very strict</button>
+      <button class="chip" id="watchedChip">Hide watched</button>
+    </div>
+  </div>
+
+  <div id="continueRow" class="continue-row hidden">
+    <p class="section-label">Continue watching</p>
+    <div id="continueList" class="continue-list"></div>
+  </div>
+
+  <div id="status" class="status"></div>
+  <div id="error" class="err hidden"></div>
+  <div id="grid" class="grid"></div>
+  <div class="more"><button id="loadMore" class="btn hidden">Load more videos</button></div>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

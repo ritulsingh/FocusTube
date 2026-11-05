@@ -1,0 +1,9 @@
+{
+  "name": "focustube",
+  "version": "1.0.0",
+  "description": "A distraction-free YouTube learning app: pick one topic, see only videos about it, and learn in focus sessions.",
+  "private": true,
+  "repository": { "type": "git", "url": "https://github.com/ritulsingh/FocusTube.git" },
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node server.js" }
+}
